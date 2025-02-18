@@ -51,5 +51,10 @@ target_link_libraries(media_processor PRIVATE
 if(MSVC)
     target_compile_options(media_processor PRIVATE /W4)
 else()
-    target_compile_options(media_processor PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(media_processor PRIVATE 
+        -Wall 
+        -Wextra 
+        -Wpedantic
+        -Wno-strict-prototypes  # Specifically target the libheif warning
+    )
 endif()
