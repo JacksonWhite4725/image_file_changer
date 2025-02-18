@@ -688,6 +688,7 @@ ImageData* load_avif(const char* filepath) {
 
 bool save_avif(const char* filepath, const ImageData* img, const ConversionOptions* options) {
     if (!img || !img->data || !filepath) {
+        printf("Error: Invalid input parameters\n");
         return false;
     }
 
@@ -717,7 +718,16 @@ bool save_avif(const char* filepath, const ImageData* img, const ConversionOptio
         return false;
     }
 
-    // Convert RGBA to AVIF
+    // Set color profile
+    avifImg->colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
+    avifImg->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
+    avifImg->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT709;
+
+    // Set pixel format and depth
+    avifImg->yuvFormat = AVIF_PIXEL_FORMAT_YUV444;
+    avifImg->depth = 8;
+
+    // Set up RGB conversion
     avifRGBImage rgb;
     avifRGBImageSetDefaults(&rgb, avifImg);
     rgb.format = AVIF_RGB_FORMAT_RGBA;
@@ -725,15 +735,18 @@ bool save_avif(const char* filepath, const ImageData* img, const ConversionOptio
     rgb.pixels = img->data;
     rgb.rowBytes = img->width * 4;
 
+    // Convert RGBA to YUV
+    printf("Converting RGBA to YUV...\n");
     avifResult result = avifImageRGBToYUV(avifImg, &rgb);
     if (result != AVIF_RESULT_OK) {
-        printf("Error: Could not convert RGB to AVIF: %s\n", avifResultToString(result));
+        printf("Error: Could not convert RGB to YUV: %s\n", avifResultToString(result));
         avifImageDestroy(avifImg);
         avifEncoderDestroy(encoder);
         return false;
     }
 
     // Encode image
+    printf("Encoding AVIF...\n");
     avifRWData output = AVIF_DATA_EMPTY;
     result = avifEncoderWrite(encoder, avifImg, &output);
     if (result != AVIF_RESULT_OK) {
@@ -744,9 +757,10 @@ bool save_avif(const char* filepath, const ImageData* img, const ConversionOptio
     }
 
     // Write to file
+    printf("Writing AVIF file...\n");
     FILE* f = fopen(filepath, "wb");
     if (!f) {
-        printf("Error: Could not open output file\n");
+        printf("Error: Could not open output file: %s\n", filepath);
         avifRWDataFree(&output);
         avifImageDestroy(avifImg);
         avifEncoderDestroy(encoder);
@@ -756,10 +770,19 @@ bool save_avif(const char* filepath, const ImageData* img, const ConversionOptio
     size_t bytesWritten = fwrite(output.data, 1, output.size, f);
     fclose(f);
 
+    if (bytesWritten != output.size) {
+        printf("Error: Failed to write all data to file\n");
+        avifRWDataFree(&output);
+        avifImageDestroy(avifImg);
+        avifEncoderDestroy(encoder);
+        return false;
+    }
+
     // Cleanup
     avifRWDataFree(&output);
     avifImageDestroy(avifImg);
     avifEncoderDestroy(encoder);
 
-    return bytesWritten == output.size;
+    printf("Successfully encoded and saved AVIF file\n");
+    return true;
 }
