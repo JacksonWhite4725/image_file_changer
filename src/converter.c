@@ -8,6 +8,7 @@
 #include <webp/decode.h>
 #include <webp/encode.h>
 #include <avif/avif.h>
+#include <libheif/heif.h>
 
 // Removed 'static' keyword since this is now a public function
 ImageData* load_png(const char* filepath) {
@@ -784,5 +785,191 @@ bool save_avif(const char* filepath, const ImageData* img, const ConversionOptio
     avifEncoderDestroy(encoder);
 
     printf("Successfully encoded and saved AVIF file\n");
+    return true;
+}
+
+ImageData* load_heic(const char* filepath) {
+    struct heif_context* ctx = heif_context_alloc();
+    if (!ctx) {
+        printf("Error: Could not create HEIF context\n");
+        return NULL;
+    }
+
+    // Read HEIC file
+    struct heif_error error = heif_context_read_from_file(ctx, filepath, NULL);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not read HEIF file: %s\n", error.message);
+        heif_context_free(ctx);
+        return NULL;
+    }
+
+    // Get handle to primary image
+    struct heif_image_handle* handle;
+    error = heif_context_get_primary_image_handle(ctx, &handle);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not get primary image handle: %s\n", error.message);
+        heif_context_free(ctx);
+        return NULL;
+    }
+
+    // Decode the image
+    struct heif_image* img;
+    error = heif_decode_image(handle, &img, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, NULL);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not decode image: %s\n", error.message);
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
+        return NULL;
+    }
+
+    // Get image dimensions
+    int width = heif_image_get_width(img, heif_channel_interleaved);
+    int height = heif_image_get_height(img, heif_channel_interleaved);
+
+    // Allocate our image structure
+    ImageData* output = (ImageData*)malloc(sizeof(ImageData));
+    if (!output) {
+        heif_image_release(img);
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
+        return NULL;
+    }
+
+    output->width = width;
+    output->height = height;
+    output->channels = 4; // RGBA
+    output->size = width * height * 4;
+    output->data = (unsigned char*)malloc(output->size);
+
+    if (!output->data) {
+        free(output);
+        heif_image_release(img);
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
+        return NULL;
+    }
+
+    // Get the image data
+    int stride;
+    const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+    if (!data) {
+        free(output->data);
+        free(output);
+        heif_image_release(img);
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
+        return NULL;
+    }
+
+    // Copy the data
+    for (int y = 0; y < height; y++) {
+        memcpy(output->data + y * width * 4, data + y * stride, width * 4);
+    }
+
+    // Cleanup HEIF objects
+    heif_image_release(img);
+    heif_image_handle_release(handle);
+    heif_context_free(ctx);
+
+    return output;
+}
+
+bool save_heic(const char* filepath, const ImageData* img, const ConversionOptions* options) {
+    if (!img || !img->data || !filepath) {
+        printf("Error: Invalid input parameters\n");
+        return false;
+    }
+
+    // Create encoder
+    struct heif_context* ctx = heif_context_alloc();
+    if (!ctx) {
+        printf("Error: Could not create HEIF context\n");
+        return false;
+    }
+
+    // Create HEIF image
+    struct heif_image* heif_img;
+    struct heif_error error = heif_image_create(img->width, img->height,
+                                              heif_colorspace_RGB,
+                                              heif_chroma_interleaved_RGBA,
+                                              &heif_img);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not create HEIF image: %s\n", error.message);
+        heif_context_free(ctx);
+        return false;
+    }
+
+    // Add image plane
+    error = heif_image_add_plane(heif_img, heif_channel_interleaved,
+                                img->width, img->height, 8);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not add image plane: %s\n", error.message);
+        heif_image_release(heif_img);
+        heif_context_free(ctx);
+        return false;
+    }
+
+    // Get plane data
+    int stride;
+    uint8_t* plane = heif_image_get_plane(heif_img, heif_channel_interleaved, &stride);
+    if (!plane) {
+        printf("Error: Could not get image plane\n");
+        heif_image_release(heif_img);
+        heif_context_free(ctx);
+        return false;
+    }
+
+    // Copy image data
+    for (size_t y = 0; y < img->height; y++) {
+        memcpy(plane + y * stride, 
+               img->data + y * img->width * 4,
+               img->width * 4);
+    }
+
+    // Get encoder
+    struct heif_encoder* encoder;
+    error = heif_context_get_encoder_for_format(ctx, heif_compression_HEVC, &encoder);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not create encoder: %s\n", error.message);
+        heif_image_release(heif_img);
+        heif_context_free(ctx);
+        return false;
+    }
+
+    // Set encoding quality
+    if (options) {
+        int quality = options->quality;
+        error = heif_encoder_set_lossy_quality(encoder, quality);
+        if (error.code != heif_error_Ok) {
+            printf("Warning: Could not set quality: %s\n", error.message);
+        }
+    }
+
+    // Encode image
+    error = heif_context_encode_image(ctx, heif_img, encoder, NULL, NULL);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not encode image: %s\n", error.message);
+        heif_encoder_release(encoder);
+        heif_image_release(heif_img);
+        heif_context_free(ctx);
+        return false;
+    }
+
+    // Write file
+    error = heif_context_write_to_file(ctx, filepath);
+    if (error.code != heif_error_Ok) {
+        printf("Error: Could not write file: %s\n", error.message);
+        heif_encoder_release(encoder);
+        heif_image_release(heif_img);
+        heif_context_free(ctx);
+        return false;
+    }
+
+    // Cleanup
+    heif_encoder_release(encoder);
+    heif_image_release(heif_img);
+    heif_context_free(ctx);
+
+    printf("Successfully encoded and saved HEIC file\n");
     return true;
 }

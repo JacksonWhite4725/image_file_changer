@@ -34,6 +34,10 @@ int main(int argc, char *argv[]) {
             printf("Loading AVIF file...\n");
             img = load_avif(argv[1]);
             break;
+        case FORMAT_HEIC:
+            printf("Loading HEIC file...\n");
+            img = load_heic(argv[1]);
+            break;
         default:
             printf("Unsupported input format\n");
             break;
@@ -79,6 +83,10 @@ int main(int argc, char *argv[]) {
             case FORMAT_AVIF:
                 printf("Saving as AVIF...\n");
                 save_success = save_avif(argv[2], img, &options);
+                break;
+            case FORMAT_HEIC:
+                printf("Saving as HEIC...\n");
+                save_success = save_heic(argv[2], img, &options);
                 break;
             default:
                 printf("Unsupported output format\n");
