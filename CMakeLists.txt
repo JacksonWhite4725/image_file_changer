@@ -27,6 +27,7 @@ add_definitions(${PNG_DEFINITIONS})
 set(SOURCES
     ${CMAKE_SOURCE_DIR}/src/main.c
     ${CMAKE_SOURCE_DIR}/src/converter.c
+    ${CMAKE_SOURCE_DIR}/src/batch_processor.c
 )
 
 # Main executable
