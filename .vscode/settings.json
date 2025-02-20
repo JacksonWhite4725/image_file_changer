@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "jpeglib.h": "c"
+        "jpeglib.h": "c",
+        "string.h": "c"
     }
 }

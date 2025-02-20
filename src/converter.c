@@ -283,6 +283,85 @@ bool save_png(const char* filepath, const ImageData* img, const ConversionOption
     return true;
 }
 
+bool convert_image(const char* input_path, 
+    const char* output_path,
+    ImageFormat target_format,
+    const ConversionOptions* options) {
+if (!input_path || !output_path) {
+printf("Error: Invalid input or output path\n");
+return false;
+}
+
+// Detect input format
+ImageFormat input_format = detect_format(input_path);
+if (input_format == FORMAT_UNKNOWN) {
+printf("Error: Unknown input format for file %s\n", input_path);
+return false;
+}
+
+// Load image based on input format
+ImageData* img = NULL;
+switch (input_format) {
+case FORMAT_PNG:
+img = load_png(input_path);
+break;
+case FORMAT_WEBP:
+img = load_webp(input_path);
+break;
+case FORMAT_JPG:
+img = load_jpeg(input_path);
+break;
+case FORMAT_AVIF:
+img = load_avif(input_path);
+break;
+case FORMAT_HEIC:
+img = load_heic(input_path);
+break;
+default:
+printf("Error: Unsupported input format\n");
+return false;
+}
+
+if (!img) {
+printf("Error: Failed to load image %s\n", input_path);
+return false;
+}
+
+// Save in target format
+bool save_success = false;
+switch (target_format) {
+case FORMAT_PNG:
+save_success = save_png(output_path, img, options);
+break;
+case FORMAT_WEBP:
+save_success = save_webp(output_path, img, options);
+break;
+case FORMAT_JPG:
+save_success = save_jpeg(output_path, img, options);
+break;
+case FORMAT_AVIF:
+save_success = save_avif(output_path, img, options);
+break;
+case FORMAT_HEIC:
+save_success = save_heic(output_path, img, options);
+break;
+default:
+printf("Error: Unsupported output format\n");
+break;
+}
+
+// Cleanup
+free_image_data(img);
+free(img);
+
+if (!save_success) {
+printf("Error: Failed to save image %s\n", output_path);
+return false;
+}
+
+return true;
+}
+
 // Custom error handler structure
 typedef struct {
     struct jpeg_error_mgr pub;

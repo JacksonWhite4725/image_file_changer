@@ -1,17 +1,20 @@
 # 🖼️ Media Processor
 
-A lightning-fast, versatile image format converter supporting modern image formats. Convert between HEIC, JPG, PNG, WEBP, and AVIF with ease and precision.
+A lightning-fast, versatile image format converter with both GUI and CLI interfaces. Convert between HEIC, JPG, PNG, WEBP, and AVIF with ease and precision.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## ✨ Features
 
+- **Dual Interface**: Choose between GUI and CLI for your workflow
 - **Multi-Format Support**: Convert between HEIC, JPG, PNG, WEBP, and AVIF formats
 - **Batch Processing**: Convert entire directories of images at once
-- **High Performance**: Optimized for speed and quality
+- **High Performance**: Multi-threaded processing for maximum speed
 - **Quality Control**: Fine-tune compression and quality settings
 - **Format Detection**: Automatic input format detection
-- **Error Handling**: Robust error handling and reporting
+- **Live Preview**: Preview images before conversion in GUI mode
+- **Drag & Drop**: Easy file handling in GUI mode
+- **Progress Tracking**: Real-time conversion progress
 
 ## 🚀 Quick Start
 
@@ -26,6 +29,7 @@ Choose your platform and install the required dependencies:
 sudo apt update
 sudo apt install build-essential cmake
 sudo apt install libheif-dev libjpeg-dev libpng-dev libwebp-dev libavif-dev
+sudo apt install libgtk-3-dev
 ```
 </details>
 
@@ -33,8 +37,9 @@ sudo apt install libheif-dev libjpeg-dev libpng-dev libwebp-dev libavif-dev
 <summary>🍎 macOS</summary>
 
 ```bash
-brew install cmake
+brew install cmake pkg-config
 brew install libheif libjpeg libpng webp libavif
+brew install gtk+3 glib pango cairo gdk-pixbuf atk harfbuzz
 ```
 </details>
 
@@ -43,13 +48,15 @@ brew install libheif libjpeg libpng webp libavif
 
 1. Install Visual Studio Community Edition with C++ support
 2. Install vcpkg (package manager)
-3. Run:
+3. Install GTK3 development files
+4. Run:
 ```bash
 vcpkg install libheif:x64-windows
 vcpkg install libjpeg-turbo:x64-windows
 vcpkg install libpng:x64-windows
 vcpkg install libwebp:x64-windows
 vcpkg install libavif:x64-windows
+vcpkg install gtk3:x64-windows
 ```
 </details>
 
@@ -72,9 +79,29 @@ cmake --build .
 
 ## 💻 Usage
 
-### Single File Conversion
-Convert individual files with optional quality settings:
+### GUI Mode
 
+Launch the GUI application:
+```bash
+./media_processor_gui
+```
+
+Features:
+- **Single File Mode**: 
+  - Select individual files
+  - Preview before conversion
+  - Real-time format switching
+  - Quality adjustment slider
+
+- **Batch Processing Mode**:
+  - Select entire directories
+  - Multi-threaded processing
+  - Progress tracking
+  - Success notifications
+
+### CLI Mode
+
+#### Single File Conversion
 ```bash
 # Basic conversion
 ./media_processor input.heic output.jpg
@@ -83,9 +110,7 @@ Convert individual files with optional quality settings:
 ./media_processor input.png output.webp -q 95
 ```
 
-### Batch Processing
-Convert all supported images in a directory:
-
+#### Batch Processing
 ```bash
 # Convert all images in a directory to WEBP
 ./media_processor -b /path/to/directory webp
@@ -108,20 +133,21 @@ Convert all supported images in a directory:
 
 ## 🎯 Supported Formats
 
-| Format | Read | Write | Quality Control |
-|--------|------|-------|----------------|
-| HEIC | ✅ | ✅ | ✅ |
-| JPG | ✅ | ✅ | ✅ |
-| PNG | ✅ | ✅ | ✅ |
-| WEBP | ✅ | ✅ | ✅ |
-| AVIF | ✅ | ✅ | ✅ |
+| Format | Read | Write | Quality Control | Preview |
+|--------|------|-------|----------------|---------|
+| HEIC | ✅ | ✅ | ✅ | ✅ |
+| JPG | ✅ | ✅ | ✅ | ✅ |
+| PNG | ✅ | ✅ | ✅ | ✅ |
+| WEBP | ✅ | ✅ | ✅ | ✅ |
+| AVIF | ✅ | ✅ | ✅ | ✅ |
 
 ## ⚡ Performance Tips
 
+- Use the GUI's batch processing for multiple files
+- Enable multi-threading for maximum performance
 - Use WEBP for web-optimized images
 - Use HEIC/AVIF for maximum compression
 - Use PNG for lossless quality
-- Batch processing is faster than converting files individually
 - Quality settings of 85-95 offer the best quality/size balance
 
 ## 🛟 Troubleshooting
@@ -133,13 +159,19 @@ Convert all supported images in a directory:
    - Ensure the file isn't corrupted
 
 2. **Build failures**
-   - Ensure all dependencies are installed
+   - Ensure all dependencies (including GTK3) are installed
    - Check CMake version (3.10+ required)
    - Verify compiler supports C11
 
-3. **Permission errors in batch mode**
-   - Check directory permissions
-   - Run with appropriate privileges
+3. **GUI not starting**
+   - Verify GTK3 installation
+   - Check system theme compatibility
+   - Ensure display server is running
+
+4. **Slow batch processing**
+   - Close other CPU-intensive applications
+   - Ensure sufficient disk space
+   - Check system memory usage
 
 ## 🤝 Contributing
 
@@ -151,7 +183,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built with support from various open-source image processing libraries
+- Built with GTK3 for the graphical interface
+- Powered by various open-source image processing libraries
 - Special thanks to the open-source community
 
 ---
